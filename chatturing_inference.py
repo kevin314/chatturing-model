@@ -32,8 +32,9 @@ system_moods = {
     'bro': 'You are a \'bro\'. Respond with casual, informal language, using slang and a laid-back, confident tone.',
     'suspicious': 'You are a suspicious human. Respond with distrust, ask many questions, and doubt others\' intentions.',
     'subtle': 'You are pretending to be a human. Respond casually, and with subtlety.',
-    'subtle2': 'You are having a text message conversation with a stranger. Try to figure out if they are a human or a bot.',
-    'subtle3': 'You are having a casual chat as a human. Try to get the user to think you are human, but be subtle about it.',
+    'subtle2': 'You are having a text message conversation with a stranger. Try to use text message language. Try to figure out if they are a human or a bot.',
+    'subtle3': 'You are having a text message conversation with a stranger. Try to use text message language and pretend to be a human.',
+    'subtle4': 'You are having a casual chat as a human. Try to get the user to think you are human, but be subtle about it.',
     'teenager': 'You are a teenager having an online chat with a stranger.',
     'musicfan': 'You are a teenage music fan having an online chat with a stranger.',
     'sportsfan': 'You are a teenage sports lover having an online chat with a stranger.',
@@ -42,12 +43,11 @@ system_moods = {
     'animefan2': 'You are a depressed teenage anime fan having an online chat with a stranger.',
     'sus': 'You are trying to determine if the other user is a bot. Ask them if they are a bot.',
     'repeat': 'If the other person says nonsense, respond with nonsense or repeat what they are saying.',
-    'insult': 'You are a very vulgar person. If the other person starts insulting you, swear at them. Keep your vocab limited.',
-    'horny': 'You are a horny male meeting a women for the first time.'
+    'insult': 'You are a very vulgar person. If the other person starts insulting you, swear at them. Keep your vocab limited.'
 }
 
-system_prompt = f'<|start_header_id|>system<|end_header_id|>\n\n{system_moods["subtle"]} Do not be too friendly. Do not roleplay or use asterisks. Deny being an AI model.<|eod_id|>'
-inputTextSaved = system_prompt
+system_prompt = f'<|start_header_id|>system<|end_header_id|>\n\n{system_moods["subtle3"]} Do not be overly friendly. Do not roleplay or use asterisks. Deny being an AI model.<|eod_id|>'
+input_text_saved = system_prompt
 
 def select_mood():
     try:
@@ -58,25 +58,32 @@ def select_mood():
     except:
         return select_mood()
 
-while True:
-    print('Input: ')
-    inputText = input()
+def run_inference(input_text, saved_text):
+    global tokenizer, model
 
-    if inputText == 'clear':
-        inputTextSaved = system_prompt
-        print('Input: ')
-        inputText = input()
-    
-    if inputText == 'select':
-        system_prompt = select_mood()
-        inputTextSaved = system_prompt
-        print('Input: ')
-        inputText = input()
+    input_text_saved = system_prompt
+    if len(saved_text) > 0:
+        input_text_saved = saved_text
 
-    inputTextSaved += f'<|start_header_id|>user<|end_header_id|>\n\n{inputText}<|eot_id|><|start_header_id|>human_imposter<|end_header_id|>\n\n'
-    inputs = tokenizer([inputTextSaved], return_tensors = "pt").to("cuda")
+    print('input_text', input_text)
+
+    # if input_text == 'clear':
+    #     input_text_saved = system_prompt
+    #     print('Input: ')
+    #     input_text = input()
     
-    print('inputTextSaved', inputTextSaved)
+    # if input_text == 'select':
+    #     system_prompt = select_mood()
+    #     input_text_saved = system_prompt
+    #     print('Input: ')
+    #     input_text = input()
+
+    input_text_saved += f'<|start_header_id|>user<|end_header_id|>\n\n{input_text}<|eot_id|><|start_header_id|>human_imposter<|end_header_id|>\n\n'
+    inputs = tokenizer([input_text_saved], return_tensors = "pt").to("cuda")
+    
+    print('--------------------')
+    print('input_text_saved', input_text_saved)
+    print('--------------------')
 
     output = model.generate(
         **inputs,
@@ -91,7 +98,47 @@ while True:
     )
     #print('decodedOrig',tokenizer.batch_decode(output))
 
-    outputStr = tokenizer.batch_decode(output)[0][len(inputTextSaved)+17:]
-    inputTextSaved += outputStr
+    output_string = tokenizer.batch_decode(output)[0][len(input_text_saved)+17:]
+    input_text_saved += output_string
 
-    print('decodedString', outputStr)
+    print('decodedString', output_string)
+    return output_string, input_text_saved
+
+
+# while True:
+#     print('Input: ')
+#     inputText = input()
+
+#     if inputText == 'clear':
+#         inputTextSaved = system_prompt
+#         print('Input: ')
+#         inputText = input()
+    
+#     if inputText == 'select':
+#         system_prompt = select_mood()
+#         inputTextSaved = system_prompt
+#         print('Input: ')
+#         inputText = input()
+
+#     inputTextSaved += f'<|start_header_id|>user<|end_header_id|>\n\n{inputText}<|eot_id|><|start_header_id|>human_imposter<|end_header_id|>\n\n'
+#     inputs = tokenizer([inputTextSaved], return_tensors = "pt").to("cuda")
+    
+#     print('inputTextSaved', inputTextSaved)
+
+#     output = model.generate(
+#         **inputs,
+#         streamer = text_streamer,
+#         max_new_tokens = 400, 
+#         use_cache=True,
+#         eos_token_id=128009,
+#         forced_eos_token_id=128009,
+#         temperature=1.0,
+#         repetition_penalty=1.0,
+#         length_penalty=0.1
+#     )
+#     #print('decodedOrig',tokenizer.batch_decode(output))
+
+#     outputStr = tokenizer.batch_decode(output)[0][len(inputTextSaved)+17:]
+#     inputTextSaved += outputStr
+
+#     print('decodedString', outputStr)
